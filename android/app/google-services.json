@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "966046319909",
+    "project_id": "neuro-balance-f8273",
+    "storage_bucket": "neuro-balance-f8273.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:966046319909:android:46427701f9bac485ae06cc",
+        "android_client_info": {
+          "package_name": "com.example.neuro_balance"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA6on1sTeKYqduMIEwPqcj3njt32YgEVsg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
