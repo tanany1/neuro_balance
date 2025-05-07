@@ -21,6 +21,9 @@ class SymptomCard extends StatelessWidget {
     // Color based on severity
     final Color severityColor = _getSeverityColor(symptom.severity);
 
+    // Parse structured data from the note if available
+    final parsedSymptom = Symptom.fromNote(symptom);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -85,11 +88,91 @@ class SymptomCard extends StatelessWidget {
 
                   const SizedBox(height: 8),
 
-                  // Notes
-                  Text(
-                    symptom.note,
-                    style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
-                  ),
+                  // Display structured data if available
+                  if (parsedSymptom.experience != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4.0),
+                      child: RichText(
+                        text: TextSpan(
+                          children: [
+                            TextSpan(
+                              text: 'Experience: ',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey.shade800,
+                                fontSize: 13,
+                              ),
+                            ),
+                            TextSpan(
+                              text: parsedSymptom.experience,
+                              style: TextStyle(
+                                color: Colors.grey.shade600,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                  if (parsedSymptom.location != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4.0),
+                      child: RichText(
+                        text: TextSpan(
+                          children: [
+                            TextSpan(
+                              text: 'Location: ',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey.shade800,
+                                fontSize: 13,
+                              ),
+                            ),
+                            TextSpan(
+                              text: parsedSymptom.location,
+                              style: TextStyle(
+                                color: Colors.grey.shade600,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                  if (parsedSymptom.additionalInfo != null && parsedSymptom.additionalInfo!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4.0),
+                      child: RichText(
+                        text: TextSpan(
+                          children: [
+                            TextSpan(
+                              text: 'Details: ',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey.shade800,
+                                fontSize: 13,
+                              ),
+                            ),
+                            TextSpan(
+                              text: parsedSymptom.additionalInfo,
+                              style: TextStyle(
+                                color: Colors.grey.shade600,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                  // For backward compatibility, show the original note if no structured data
+                  if (parsedSymptom.experience == null && parsedSymptom.location == null && symptom.note.isNotEmpty)
+                    Text(
+                      symptom.note,
+                      style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                    ),
                 ],
               ),
             ),

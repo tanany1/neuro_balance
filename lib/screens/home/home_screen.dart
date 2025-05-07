@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:neuro_balance/screens/profile/profile_screen.dart';
+import 'package:neuro_balance/screens/tips/awareness_screen.dart';
 import 'package:provider/provider.dart';
 import '../../providers/medication_provider.dart';
 import '../../providers/symptom_provider.dart';
-import '../../providers/user_provider.dart'; // Import the new user provider
+import '../../providers/user_provider.dart';
 import '../../widgets/medication_card.dart';
 import '../../widgets/symptom_card.dart';
 import '../chat/chat_screen.dart';
@@ -32,7 +33,8 @@ class _HomeScreenState extends State<HomeScreen> {
       const SymptomTrackerScreen(),
       const MedicationsScreen(),
       const ChatScreen(),
-      const ProfileScreen(),
+      AwarenessScreen(),
+      const ProfileScreen()
     ];
 
     return Scaffold(
@@ -54,6 +56,7 @@ class _HomeScreenState extends State<HomeScreen> {
             label: 'Medications',
           ),
           BottomNavigationBarItem(icon: Icon(Icons.chat), label: 'Chat'),
+          BottomNavigationBarItem(icon: Icon(Icons.noise_aware), label: 'Awareness'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
       ),
@@ -211,24 +214,22 @@ const HomeContent({Key? key, required this.onTabSelected}) : super(key: key);
                           ],
                         ),
                         const SizedBox(height: 8),
-                        Row(
-                          children:
-                              medicationProvider.todaysMedications
-                                  .take(2)
-                                  .map(
-                                    (medication) => Expanded(
-                                      child: Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 4,
-                                        ),
-                                        child: MedicationCard(
-                                          medication: medication,
-                                        ),
-                                      ),
-                                    ),
-                                  )
-                                  .toList(),
-                        ),
+                        Column(
+                          children: medicationProvider.todaysMedications
+                              .take(4) // You can show more medications in a list view
+                              .map(
+                                (medication) => Padding(
+                              padding: const EdgeInsets.only(bottom: 8.0),
+                              child: SizedBox(
+                                width: double.infinity, // Make card take full width
+                                child: MedicationCard(
+                                  medication: medication,
+                                ),
+                              ),
+                            ),
+                          )
+                              .toList(),
+                        )
                       ],
                     ),
           ),

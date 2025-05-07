@@ -1,7 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:hive_flutter/hive_flutter.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // Added import for Firestore
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -15,7 +14,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController passwordController = TextEditingController();
   final GlobalKey<FormState> formKey = GlobalKey<FormState>();
   bool isLoading = false;
-  final _userDataBox = Hive.box('user_data');
 
   @override
   void initState() {
@@ -27,8 +25,6 @@ class _LoginScreenState extends State<LoginScreen> {
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser != null) {
       String userId = currentUser.uid;
-
-      // Check user type from Firestore instead of Hive for more reliability
       try {
         DocumentSnapshot userDoc = await FirebaseFirestore.instance
             .collection('users')
@@ -39,12 +35,6 @@ class _LoginScreenState extends State<LoginScreen> {
           Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
           String userType = userData['userType'] ?? '';
 
-          // Update Hive with the latest data
-          await _userDataBox.put('$userId-userType', userType);
-          await _userDataBox.put('isLoggedIn', true);
-          await _userDataBox.put('loggedInUserId', userId);
-
-          // Navigate based on user type
           if (userType == 'Doctor') {
             Navigator.pushReplacementNamed(context, '/doctor_home');
           } else {
@@ -52,23 +42,14 @@ class _LoginScreenState extends State<LoginScreen> {
           }
         }
       } catch (e) {
-        // If Firestore check fails, fall back to Hive
-        bool isDoctor = _userDataBox.get('$userId-userType') == 'Doctor';
-        await _userDataBox.put('isLoggedIn', true);
-        await _userDataBox.put('loggedInUserId', userId);
-
-        if (isDoctor) {
-          Navigator.pushReplacementNamed(context, '/doctor_home');
-        } else {
-          Navigator.pushReplacementNamed(context, '/home');
-        }
+        // If we can't get the user type from Firestore, default to regular user
+        Navigator.pushReplacementNamed(context, '/home');
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Rest of the build method remains the same
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -317,8 +298,6 @@ class _LoginScreenState extends State<LoginScreen> {
         password: passwordController.text,
       );
       String userId = credential.user!.uid;
-
-      // Get user type from Firestore first for reliability
       try {
         DocumentSnapshot userDoc = await FirebaseFirestore.instance
             .collection('users')
@@ -329,16 +308,10 @@ class _LoginScreenState extends State<LoginScreen> {
           Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
           String userType = userData['userType'] ?? '';
 
-          // Update Hive with the latest data
-          await _userDataBox.put('$userId-userType', userType);
-          await _userDataBox.put('isLoggedIn', true);
-          await _userDataBox.put('loggedInUserId', userId);
-
           setState(() {
             isLoading = false;
           });
 
-          // Navigate based on user type
           if (userType == 'Doctor') {
             Navigator.pushReplacementNamed(context, '/doctor_home');
           } else {
@@ -347,24 +320,15 @@ class _LoginScreenState extends State<LoginScreen> {
           return;
         }
       } catch (e) {
-        // If Firestore check fails, proceed with Hive data
         print("Error getting user type from Firestore: $e");
       }
 
-      // Fallback to Hive data
-      bool isDoctor = _userDataBox.get('$userId-userType') == 'Doctor';
-      await _userDataBox.put('isLoggedIn', true);
-      await _userDataBox.put('loggedInUserId', userId);
-
+      // Default to regular user home if we couldn't determine user type
       setState(() {
         isLoading = false;
       });
+      Navigator.pushReplacementNamed(context, '/home');
 
-      if (isDoctor) {
-        Navigator.pushReplacementNamed(context, '/doctor_home');
-      } else {
-        Navigator.pushReplacementNamed(context, '/home');
-      }
     } on FirebaseAuthException catch (e) {
       setState(() {
         isLoading = false;

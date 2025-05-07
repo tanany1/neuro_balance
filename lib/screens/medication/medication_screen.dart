@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:uuid/uuid.dart';
+import 'dart:developer' as developer;
 
 import '../../models/medication.dart';
 import '../../providers/medication_provider.dart';
@@ -17,11 +19,91 @@ class _MedicationsScreenState extends State<MedicationsScreen> {
   bool _showAllMedications = true;
   final NotificationService _notificationService = NotificationService();
   DateTime _selectedDate = DateTime.now();
+  int _notificationIdCounter = 0;
+
+  final List<Map<String, dynamic>> _availableMedications = [
+    {
+      'name': 'Copaxone',
+      'generic name' : 'Copaxone',
+      'dosage': 20.0,
+      'dosageUnit': 'mg/ml',
+      'instructions': 'Rotate injection sites',
+      'frequency': 'once daily',
+    },
+    {
+      'name': 'Avonex',
+      'generic name' : 'Avonex',
+      'dosage': 30.0,
+      'dosageUnit': 'mg/ml',
+      'instructions': 'Take at bedtime to reduce flu-like symptoms',
+      'frequency': 'once a week',
+    },
+    {
+      'name': 'Rebif',
+      'generic name' : 'Rebif',
+      'dosage': 44.0,
+      'dosageUnit': 'mg/ml',
+      'instructions': 'Rotate injection sites',
+      'frequency': 'three times a week',
+    },
+    {
+      'name': 'Betaseron',
+      'generic name' : 'Betaseron',
+      'dosage': 250.0,
+      'dosageUnit': 'mg/ml',
+      'instructions': 'Rotate injection sites; allow solution to reach room temp before injecting',
+      'frequency': 'once every two days',
+    },
+    {
+      'name': 'Extavia',
+      'generic name' : 'Extavia',
+      'dosage': 250.0,
+      'dosageUnit': 'mg/ml',
+      'instructions': 'Rotate injection sites; allow solution to reach room temp before injecting',
+      'frequency': 'once every two days',
+    },
+    {
+      'generic name': 'Dimethylfumarate',
+      'name' : 'Tecfidera/Marovarex',
+      'dosage': 240.0,
+      'dosageUnit': 'mg',
+      'instructions': 'Take with food to reduce stomach upset and flushing',
+      'frequency': 'twice daily',
+    },
+    {
+      'generic name': 'Teriflunomide',
+      'name' : 'Aubagio/Triflutect',
+      'dosage': 14.0,
+      'dosageUnit': 'mg',
+      'instructions': 'Take at the same time daily, with or without food',
+      'frequency': 'once daily',
+    },
+    {
+      'generic name': ' Fingolimod',
+      'name' : 'Gilenya/sphingomod',
+      'dosage': 0.5,
+      'dosageUnit': 'mg',
+      'instructions': 'First dose must be monitored in clinic (heart rate)',
+      'frequency': 'once daily',
+    },
+    {
+      'generic name': 'Siponimod',
+      'name' : 'Mayzent',
+      'dosage': 2.0,
+      'dosageUnit': 'mg',
+      'instructions': 'First dose may need monitoring',
+      'frequency': 'once daily',
+    },
+  ];
 
   @override
   void initState() {
     super.initState();
-    _notificationService.initNotification();
+    _notificationService.initNotification().then((_) {
+      developer.log('NotificationService initialized successfully');
+    }).catchError((error) {
+      developer.log('Error initializing NotificationService: $error');
+    });
   }
 
   @override
@@ -184,30 +266,6 @@ class _MedicationsScreenState extends State<MedicationsScreen> {
     );
   }
 
-  Widget _buildFilterButton(String text, bool isActive) {
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _showAllMedications = text == 'All';
-        });
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-        decoration: BoxDecoration(
-          color: isActive ? Colors.white : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Text(
-          text,
-          style: TextStyle(
-            color: isActive ? Colors.black : Colors.grey[600],
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildSwipeableMedicationCard(BuildContext context, Medication medication, MedicationProvider provider) {
     return Dismissible(
       key: Key(medication.id),
@@ -302,7 +360,7 @@ class _MedicationsScreenState extends State<MedicationsScreen> {
       statusColor = Colors.black;
       statusBgColor = Colors.grey.shade300;
     } else {
-      statusText = DateFormat('E, MMM d').format(medication.scheduledTime); // Day of week and date
+      statusText = DateFormat('E, MMM d').format(medication.scheduledTime);
       statusColor = Colors.black;
       statusBgColor = Colors.grey.shade300;
     }
@@ -312,12 +370,10 @@ class _MedicationsScreenState extends State<MedicationsScreen> {
     if (isToday && !medication.isTaken) {
       final difference = medication.scheduledTime.difference(now);
       if (difference.isNegative) {
-        // Overdue
         final hours = difference.inHours.abs();
         final minutes = difference.inMinutes.abs() % 60;
         remainingTimeText = 'Overdue by ${hours > 0 ? '$hours hours' : ''} ${minutes > 0 ? '$minutes minutes' : ''}';
       } else {
-        // Upcoming
         final hours = difference.inHours;
         final minutes = difference.inMinutes % 60;
         remainingTimeText = 'Due in ${hours > 0 ? '$hours hours' : ''} ${minutes > 0 ? '$minutes minutes' : ''}';
@@ -464,172 +520,230 @@ class _MedicationsScreenState extends State<MedicationsScreen> {
   }
 
   void _showAddMedicationDialog(BuildContext context, MedicationProvider provider) {
-    final nameController = TextEditingController();
-    final genericNameController = TextEditingController();
-    final dosageController = TextEditingController();
-    final instructionsController = TextEditingController();
-    String dosageUnit = 'mg';
-    DateTime selectedDate = _selectedDate; // Use the currently selected date
-    TimeOfDay selectedTime = TimeOfDay.now();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Select Medication'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: _availableMedications.length,
+            itemBuilder: (context, index) {
+              final med = _availableMedications[index];
+              return ListTile(
+                title: Text(med['name']),
+                subtitle: Text('${med['dosage']} ${med['dosageUnit']} - ${med['frequency']}'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showTimePickerDialog(context, provider, med);
+                },
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showTimePickerDialog(BuildContext context, MedicationProvider provider, Map<String, dynamic> selectedMed) {
+    TimeOfDay lastTakenTime = TimeOfDay.now();
+    DateTime lastTakenDate = DateTime.now();
 
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setState) {
-          return AlertDialog(
-            title: const Text('Add New Medication'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextField(
-                    controller: nameController,
-                    decoration: const InputDecoration(
-                      labelText: 'Medication Name',
-                    ),
-                  ),
-                  TextField(
-                    controller: genericNameController,
-                    decoration: const InputDecoration(
-                      labelText: 'Generic Name',
-                    ),
-                  ),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: dosageController,
-                          decoration: const InputDecoration(
-                            labelText: 'Dosage',
-                          ),
-                          keyboardType: TextInputType.number,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      DropdownButton<String>(
-                        value: dosageUnit,
-                        items: ['mg', 'mcg', 'ml', 'g', 'tablet(s)']
-                            .map((unit) => DropdownMenuItem(
-                          value: unit,
-                          child: Text(unit),
-                        ))
-                            .toList(),
-                        onChanged: (value) {
-                          if (value != null) {
-                            setState(() {
-                              dosageUnit = value;
-                            });
-                          }
-                        },
-                      ),
-                    ],
-                  ),
-                  TextField(
-                    controller: instructionsController,
-                    decoration: const InputDecoration(
-                      labelText: 'Instructions (e.g., Take with food)',
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Schedule:',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  ListTile(
-                    title: const Text('Date'),
-                    subtitle: Text(DateFormat('yyyy-MM-dd').format(selectedDate)),
-                    trailing: const Icon(Icons.calendar_today),
-                    onTap: () async {
-                      final DateTime? pickedDate = await showDatePicker(
-                        context: context,
-                        initialDate: selectedDate,
-                        firstDate: DateTime.now(),
-                        lastDate: DateTime.now().add(const Duration(days: 365)),
-                      );
-                      if (pickedDate != null && pickedDate != selectedDate) {
-                        setState(() {
-                          selectedDate = pickedDate;
-                        });
-                      }
-                    },
-                  ),
-                  ListTile(
-                    title: const Text('Time'),
-                    subtitle: Text(selectedTime.format(context)),
-                    trailing: const Icon(Icons.access_time),
-                    onTap: () async {
-                      final TimeOfDay? pickedTime = await showTimePicker(
-                        context: context,
-                        initialTime: selectedTime,
-                      );
-                      if (pickedTime != null && pickedTime != selectedTime) {
-                        setState(() {
-                          selectedTime = pickedTime;
-                        });
-                      }
-                    },
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  if (nameController.text.isNotEmpty &&
-                      dosageController.text.isNotEmpty) {
-                    // Combine date and time
-                    final scheduledDateTime = DateTime(
-                      selectedDate.year,
-                      selectedDate.month,
-                      selectedDate.day,
-                      selectedTime.hour,
-                      selectedTime.minute,
-                    );
-
-                    // Create medication object
-                    final newMedication = Medication(
-                      id: DateTime.now().millisecondsSinceEpoch.toString(),
-                      name: nameController.text,
-                      genericName: genericNameController.text.isNotEmpty
-                          ? genericNameController.text
-                          : nameController.text,
-                      dosage: double.tryParse(dosageController.text) ?? 0,
-                      dosageUnit: dosageUnit,
-                      instructions: instructionsController.text.isNotEmpty
-                          ? instructionsController.text
-                          : 'Take as directed',
-                      scheduledTime: scheduledDateTime,
-                      isTaken: false,
-                    );
-
-                    // Add medication and schedule notification
-                    provider.addMedication(newMedication);
-                    _scheduleNotification(newMedication);
-
-                    Navigator.pop(context);
+        builder: (context, setState) => AlertDialog(
+          title: Text('Schedule ${selectedMed['name']}'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Select the time for this medication:'),
+              const SizedBox(height: 16),
+              ListTile(
+                title: const Text('Date'),
+                subtitle: Text(DateFormat('yyyy-MM-dd').format(lastTakenDate)),
+                trailing: const Icon(Icons.calendar_today),
+                onTap: () async {
+                  final DateTime? pickedDate = await showDatePicker(
+                    context: context,
+                    initialDate: lastTakenDate,
+                    firstDate: DateTime.now(),
+                    lastDate: DateTime.now().add(const Duration(days: 30)),
+                  );
+                  if (pickedDate != null) {
+                    setState(() {
+                      lastTakenDate = pickedDate;
+                    });
                   }
                 },
-                child: const Text('Add'),
+              ),
+              ListTile(
+                title: const Text('Time'),
+                subtitle: Text(lastTakenTime.format(context)),
+                trailing: const Icon(Icons.access_time),
+                onTap: () async {
+                  final TimeOfDay? pickedTime = await showTimePicker(
+                    context: context,
+                    initialTime: lastTakenTime,
+                  );
+                  if (pickedTime != null) {
+                    setState(() {
+                      lastTakenTime = pickedTime;
+                    });
+                  }
+                },
               ),
             ],
-          );
-        },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                // Combine date and time
+                final scheduledDateTime = DateTime(
+                  lastTakenDate.year,
+                  lastTakenDate.month,
+                  lastTakenDate.day,
+                  lastTakenTime.hour,
+                  lastTakenTime.minute,
+                );
+
+                // Calculate schedule based on frequency
+                final frequency = selectedMed['frequency'].toString().toLowerCase();
+                List<DateTime> scheduledTimes = [];
+                developer.log('Scheduling for ${selectedMed['name']} with frequency: $frequency');
+
+                if (frequency == 'three times a week') {
+                  // Schedule on Mon, Wed, Fri starting from the selected date
+                  final startDate = scheduledDateTime;
+                  final daysOfWeek = [1, 3, 5]; // Monday, Wednesday, Friday
+                  for (int i = 0; i < 7; i++) {
+                    final nextDay = startDate.add(Duration(days: i));
+                    if (daysOfWeek.contains(nextDay.weekday)) {
+                      final nextDoseTime = DateTime(
+                        nextDay.year,
+                        nextDay.month,
+                        nextDay.day,
+                        lastTakenTime.hour,
+                        lastTakenTime.minute,
+                      );
+                      if (nextDoseTime.isAfter(DateTime.now())) {
+                        scheduledTimes.add(nextDoseTime);
+                        developer.log('Added three times a week dose: ${DateFormat('yyyy-MM-dd HH:mm').format(nextDoseTime)}');
+                      } else {
+                        developer.log('Skipped past dose: ${DateFormat('yyyy-MM-dd HH:mm').format(nextDoseTime)}');
+                      }
+                    }
+                  }
+                } else {
+                  // Define intervals (in hours)
+                  int intervalHours;
+                  int dosesPerCycle;
+                  int cycleDays;
+
+                  switch (frequency) {
+                    case 'once daily':
+                      intervalHours = 24;
+                      dosesPerCycle = 1;
+                      cycleDays = 1;
+                      break;
+                    case 'twice daily':
+                      intervalHours = 12;
+                      dosesPerCycle = 2;
+                      cycleDays = 1;
+                      break;
+                    case 'once every two days':
+                      intervalHours = 48;
+                      dosesPerCycle = 1;
+                      cycleDays = 2;
+                      break;
+                    case 'once a week':
+                      intervalHours = 168;
+                      dosesPerCycle = 1;
+                      cycleDays = 7;
+                      break;
+                    default:
+                      intervalHours = 24;
+                      dosesPerCycle = 1;
+                      cycleDays = 1;
+                  }
+
+                  // Schedule doses for the next 7 days
+                  DateTime nextDoseTime = scheduledDateTime;
+                  for (int i = 0; i < dosesPerCycle * 7; i++) {
+                    nextDoseTime = nextDoseTime.add(Duration(hours: intervalHours));
+                    developer.log('Calculated next dose time: ${DateFormat('yyyy-MM-dd HH:mm').format(nextDoseTime)}');
+                    if (nextDoseTime.isAfter(DateTime.now())) {
+                      scheduledTimes.add(nextDoseTime);
+                      developer.log('Added to scheduledTimes: ${DateFormat('yyyy-MM-dd HH:mm').format(nextDoseTime)}');
+                    } else {
+                      developer.log('Skipped past dose time: ${DateFormat('yyyy-MM-dd HH:mm').format(nextDoseTime)}');
+                    }
+                  }
+                }
+
+                // Log scheduled times
+                developer.log('Total scheduled times: ${scheduledTimes.length}');
+                for (var time in scheduledTimes) {
+                  developer.log('Scheduled time: ${DateFormat('yyyy-MM-dd HH:mm').format(time)}');
+                }
+
+                // Fallback test dose
+                if (scheduledTimes.isEmpty) {
+                  developer.log('No future doses scheduled, adding test dose in 1 minute');
+                  scheduledTimes.add(DateTime.now().add(Duration(minutes: 1)));
+                }
+
+                // Create and add medications
+                for (var scheduledTime in scheduledTimes) {
+                  final medication = Medication(
+                    id: const Uuid().v4(),
+                    name: selectedMed['name'],
+                    genericName: selectedMed['generic name'],
+                    dosage: selectedMed['dosage'],
+                    dosageUnit: selectedMed['dosageUnit'],
+                    instructions: selectedMed['instructions'],
+                    scheduledTime: scheduledTime,
+                    isTaken: scheduledTime.isBefore(DateTime.now()),
+                  );
+
+                  provider.addMedication(medication);
+                  _scheduleNotification(medication);
+                }
+                Navigator.pop(context);
+              },
+              child: const Text('Add'),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   void _scheduleNotification(Medication medication) {
-    // Schedule notification for the medication
+    final notificationId = _notificationIdCounter++;
+    developer.log(
+        'Scheduling notification ID: $notificationId for ${medication.name} at ${DateFormat('yyyy-MM-dd HH:mm').format(medication.scheduledTime)}');
     _notificationService.scheduleNotification(
-      id: medication.id.hashCode,
+      id: notificationId,
       title: 'Medication Reminder',
       body: 'Time to take ${medication.name} (${medication.dosage} ${medication.dosageUnit})',
       scheduledTime: medication.scheduledTime,
-    );
+    ).then((_) {
+      developer.log('Notification ID: $notificationId scheduled successfully');
+    }).catchError((error) {
+      developer.log('Error scheduling notification ID: $notificationId: $error');
+    });
   }
 }

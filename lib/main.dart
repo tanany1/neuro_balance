@@ -4,6 +4,7 @@ import 'package:hive_flutter/adapters.dart';
 import 'package:neuro_balance/providers/user_provider.dart';
 import 'package:neuro_balance/screens/home/doctor_home_screen.dart';
 import 'package:neuro_balance/screens/profile/profile_screen.dart';
+import 'package:neuro_balance/screens/tips/awareness_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:neuro_balance/providers/medication_provider.dart';
 import 'package:neuro_balance/providers/symptom_provider.dart';
@@ -85,6 +86,7 @@ class MyApp extends StatelessWidget {
         '/medications': (context) => const MedicationsScreen(),
         '/profile': (context) => const ProfileScreen(),
         '/doctor_home': (context) => const DoctorHomeScreen(),
+        '/awareness': (context) => AwarenessScreen(),
       },
       initialRoute: '/splash',
     );
