@@ -1,12 +1,13 @@
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:hive/hive.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 import '../models/medication.dart';
 
 class MedicationProvider with ChangeNotifier {
   List<Medication> _medications = [];
-  static const String _storageKey = 'medications';
+  static const String _boxName = 'medications';
+  late Box<Map> _medicationsBox;
 
   List<Medication> get medications {
     // Sort by date and time
@@ -42,8 +43,15 @@ class MedicationProvider with ChangeNotifier {
       ..sort((a, b) => a.scheduledTime.compareTo(b.scheduledTime));
   }
 
-  // Initialize the provider by loading medications from storage
+  // Initialize the provider by setting up Hive and loading medications
   Future<void> initialize() async {
+    // Initialize Hive
+    await Hive.initFlutter();
+
+    // Open the medications box
+    _medicationsBox = await Hive.openBox<Map>(_boxName);
+
+    // Load medications from Hive
     await loadMedications();
   }
 
@@ -81,24 +89,28 @@ class MedicationProvider with ChangeNotifier {
     saveMedications();
   }
 
-  // Save medications to persistent storage
+  // Save medications to Hive
   Future<void> saveMedications() async {
-    final prefs = await SharedPreferences.getInstance();
-    final List<String> medicationJsonList =
-    _medications.map((med) => jsonEncode(med.toMap())).toList();
-    await prefs.setStringList(_storageKey, medicationJsonList);
+    // Clear the existing data
+    await _medicationsBox.clear();
+
+    // Save all medications
+    for (var med in _medications) {
+      await _medicationsBox.put(med.id, med.toMap());
+    }
   }
 
-  // Load medications from persistent storage
+  // Load medications from Hive
   Future<void> loadMedications() async {
-    final prefs = await SharedPreferences.getInstance();
-    final medicationJsonList = prefs.getStringList(_storageKey);
+    _medications = _medicationsBox.values
+        .map((medMap) => Medication.fromMap(Map<String, dynamic>.from(medMap)))
+        .toList();
+    notifyListeners();
+  }
 
-    if (medicationJsonList != null) {
-      _medications = medicationJsonList
-          .map((medJson) => Medication.fromMap(jsonDecode(medJson)))
-          .toList();
-      notifyListeners();
-    }
+  // Close Hive boxes when the app is closed
+  Future<void> dispose() async {
+    await _medicationsBox.close();
+    super.dispose();
   }
 }

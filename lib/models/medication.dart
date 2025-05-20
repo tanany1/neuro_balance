@@ -1,11 +1,31 @@
+import 'package:hive/hive.dart';
+
+part 'medication.g.dart';
+
+@HiveType(typeId: 0)
 class Medication {
+  @HiveField(0)
   final String id;
+
+  @HiveField(1)
   final String name;
+
+  @HiveField(2)
   final String genericName;
+
+  @HiveField(3)
   final double dosage;
+
+  @HiveField(4)
   final String dosageUnit;
+
+  @HiveField(5)
   final String instructions;
+
+  @HiveField(6)
   final DateTime scheduledTime;
+
+  @HiveField(7)
   bool isTaken;
 
   Medication({

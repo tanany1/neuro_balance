@@ -18,12 +18,21 @@ import 'package:neuro_balance/screens/symptoms/symptoms_screen.dart';
 import 'package:neuro_balance/screens/welcome/welcome_screen.dart';
 
 import 'firebase_options.dart';
+import 'models/medication.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Hive.initFlutter();
   await Hive.openBox('user_data');
+  // Initialize Hive
+  await Hive.initFlutter();
 
+  // Register the Medication adapter
+  Hive.registerAdapter(MedicationAdapter());
+
+  // Create and initialize the MedicationProvider
+  final medicationProvider = MedicationProvider();
+  await medicationProvider.initialize();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
